@@ -15,22 +15,36 @@ class VerifyTokenMiddleware
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next)
-    {
-        // Retrieve the token from the request headers
-        $token = $request->header('Authorization');
+{
+    $token = $request->input('token');
 
-        if (!$token) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
+    if (!$token) {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
 
-        // Send the token to the User microservice for validation
-        $response = Http::withHeaders(['Authorization' => $token])
-            ->get(env('USER_SERVICE_URL') . '/api/verify-token'); // Assuming the endpoint for token verification
+    try {
+        $response = Http::timeout(10)->post("http://laravel-auth:8002/api/auth/check-token", [
+            "token" => $token
+        ]);
 
         if ($response->failed()) {
-            return response()->json(['error' => 'Invalid token'], 401);
+            return response()->json([
+                'error' => 'Invalid token',
+                'details' => $response->body()
+            ], 401);
         }
 
         return $next($request);
+    } catch (\Exception $e) {
+        \Log::error('Token verification error', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'error' => 'Token verification failed',
+            'exception' => $e->getMessage()
+        ], 500);
     }
+}
 }

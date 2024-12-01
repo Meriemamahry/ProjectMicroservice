@@ -1,6 +1,7 @@
 version: '3.8'
 services:
   laravel-app:
+    container_name: laravel-project
     build: .
     ports:
       - "8000:8000"
@@ -21,11 +22,12 @@ services:
 
   mysql:
     image: mysql:8.0
+    container_name: mysql-first
     environment:
       - MYSQL_ALLOW_EMPTY_PASSWORD=yes
       - MYSQL_DATABASE=projects
     ports:
-      - "3306:3306"
+      - "3307:3306" # Maps host 3307 to container 3306
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -36,3 +38,6 @@ volumes:
 
 networks:
   app-network:
+    driver: bridge
+
+
